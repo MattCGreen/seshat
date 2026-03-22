@@ -1,0 +1,19 @@
+---
+version: 1.0
+last_updated: "2026-03-15"
+maintainer: matthew.green
+
+rules:
+  - rule_id: PII-001
+    name: prohibit-pii-processing-without-consent
+    severity: high
+    enabled: true
+    rationale: |
+      Processing personally identifiable information (PII) without explicit consent violates data protection regulations such as GDPR.
+      Organizations must obtain clear and informed consent from individuals before processing their PII.
+    scope:
+      applies_to: pii-processing
+      jurisdictions:
+        - EU
+        - US
+        - UK
