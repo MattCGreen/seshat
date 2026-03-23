@@ -83,7 +83,7 @@ The LLMs write code. I own the architecture and the accountability.
 This is how I believe AI tooling should work: human authority over AI capability. Seshat is built the same way it's designed to enforce, and be an audit asset.
 
 ## License
-## Apache 2.0
+Apache 2.0
 
 Author
 Matthew Green
