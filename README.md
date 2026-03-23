@@ -47,11 +47,15 @@ This runs two test cases against the PII policy and writes decisions to seshat_a
 Example Output:
 
 Tool:    query_database
+
 Agent:   hermes-data-processor
+
 Session: abc-123
+
 Rule:    PII-001 — prohibit-pii-processing-without-consent
 
 DENY
+
 Reason: PII detected in parameters without consent check
   - field 'query' contains EMAIL
 
