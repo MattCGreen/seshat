@@ -37,6 +37,7 @@ If Seshat can't evaluate, the agent doesn't act.
 
 ```bash
 pip install pyyaml
+```
 
 ### Run
 python pii_evaluator.py
