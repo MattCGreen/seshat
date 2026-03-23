@@ -28,6 +28,7 @@ share/python-wheels/
 # Logs
 logs/
 *.log
+seshat_audit.jsonl
 
 # Virtual environment
 venv/
@@ -41,3 +42,6 @@ venv/
 # IDEs and Editors
 .vscode/
 .idea/
+
+# Runtime output
+.jsonl
