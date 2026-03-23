@@ -17,7 +17,7 @@ If Seshat can't evaluate, the agent doesn't act.
 
 ## Current Status
 
-**v0.1 — Proof of Concept**
+**v0.2 — Proof of Concept**
 
 - [x] YAML policy file with PII detection rules
 - [x] Regex-based PII scanner (email, SSN)
@@ -57,10 +57,10 @@ Reason: PII detected in parameters without consent check
 
 
 ## Design Principles
-## Fail closed. No evaluation means no action.
-## Append-only logging. Decisions are never overwritten or deleted.
-## Policy as code. Rules are human-readable YAML, version controlled alongside the engine.
-## Separation of concerns. Loader, scanner, evaluator, and logger are distinct functions.
+Fail closed. No evaluation means no action.
+Append-only logging. Decisions are never overwritten or deleted.
+Policy as code. Rules are human-readable YAML, version controlled alongside the engine.
+Separation of concerns. Loader, scanner, evaluator, and logger are distinct functions.
 
 ## How This Was Built
 
