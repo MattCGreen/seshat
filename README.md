@@ -45,6 +45,7 @@ python pii_evaluator.py
 This runs two test cases against the PII policy and writes decisions to seshat_audit.jsonl.
 
 Example Output:
+
 Tool:    query_database
 Agent:   hermes-data-processor
 Session: abc-123
