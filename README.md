@@ -23,9 +23,10 @@ If Seshat can't evaluate, the agent doesn't act.
 - [x] Regex-based PII scanner (email, SSN)
 - [x] Policy evaluator with ALLOW/DENY decisions
 - [x] JSONL append-only audit log
-- [ ] Multi-rule evaluation
-- [ ] Configurable PII patterns
-- [x] Redaction of PII in audit logs
+- [x] Multi-rule evaluation
+- [x] Colorado AI Act disclosure rule
+- [x] Configurable PII patterns
+- [ ] Redaction of PII in audit logs
 - [ ] Integration with agent frameworks
 
 ## Quick Start
