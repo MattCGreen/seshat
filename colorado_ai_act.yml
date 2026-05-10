@@ -1,0 +1,27 @@
+---
+version: 1.0
+last_updated: "2026-03-15"
+maintainer: matthew.green
+
+policy:
+  name: colorado-ai-act-compliance
+  rules:
+    - rule_id: COL-001
+      name: require-consequential-decision-disclosure
+      type: disclosure_check
+      description: >
+        AI agents making decisions in consequential
+        domains must include a disclosure flag confirming
+        the consumer has been notified that AI is involved
+        in the decision.
+      severity: high
+      enabled: true
+      consequential_domains:
+        - employment
+        - lending
+        - housing
+        - insurance
+        - education
+        - healthcare
+      required_field: disclosure_provided
+      action: deny
