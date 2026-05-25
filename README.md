@@ -26,7 +26,7 @@ If Seshat can't evaluate, the agent doesn't act.
 - [x] Multi-rule evaluation
 - [x] Colorado AI Act disclosure rule
 - [x] Configurable PII patterns
-- [ ] Redaction of PII in audit logs
+- [x] Redaction of PII in audit logs
 - [ ] Integration with agent frameworks
 
 ## Quick Start
