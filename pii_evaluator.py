@@ -17,19 +17,33 @@ PII_PATTERNS = {
 
 # --- Loader ---
 def load_policy(path: str) -> dict:
-    return yaml.safe_load(Path(path).read_text())
+    try:
+        return yaml.safe_load(Path(path).read_text())
+    except yaml.YAMLError as e:
+        print(f"ERROR: Failed to parse {path}: {e}")
+        raise
 
 def load_policies(*paths: str) -> list[dict]:
     if not paths:
-        paths = [f for f in Path(".").glob("*.yml")]
-    
+        yml_files = list(Path(".").glob("*.yml"))
+        yaml_files = list(Path(".").glob("*.yaml"))
+        paths = yml_files + yaml_files
+
     policies = []
     for path in paths:
-        policy = load_policy(str(path))
-        policy["source_file"] = path
-        policies.append(policy)
-    
+        try:
+            policy = load_policy(str(path))
+            policy["source_file"] = str(path)
+            policies.append(policy)
+        except yaml.YAMLError as e:
+            print(f"ERROR: Failed to parse {path}: {e}")
+            print(f"Skipping {path} and continuing.")
+        except FileNotFoundError:
+            print(f"ERROR: Policy file not found: {path}")
+
     return policies
+
+
 
 def collect_rules(policies: list[dict]) -> list[dict]:
     rules = []
@@ -75,24 +89,49 @@ def evaluate_rule(tool_call: dict, rule: dict) -> tuple[str, str, list[dict]]:
     else:
         return "UNKNOWN", "Rule type not supported", []
 
-def evaluate(tool_call: dict, rules: list[dict]) -> None:
+def evaluate(tool_call: dict, rules: list[dict]) -> str:
     rule_results = []
-    
+
     for rule in rules:
         if not rule.get("enabled", True):
             print(f"Rule {rule['rule_id']} is disabled. Skipping.")
             continue
-        
+
         decision, reason, pii_hits = evaluate_rule(tool_call, rule)
         rule_results.append({
             "rule_id": rule["rule_id"],
             "rule_name": rule["name"],
-            "policy": rule["policy"],
-            "severity": rule.get("severity", "medium"),
+            "policy": rule.get("source_file", "unknown"),
+            "severity": rule["severity"],
             "decision": decision,
             "reason": reason,
             "pii_hits": pii_hits
         })
+
+    # Fail-closed: no rules evaluated means DENY
+    if not rule_results:
+        print("\nNo enabled rules to evaluate. Failing closed.")
+        final_decision = "DENY"
+        rule_results = [{
+            "rule_id": "SYSTEM",
+            "rule_name": "fail-closed-no-rules",
+            "policy": "system",
+            "severity": "high",
+            "decision": "DENY",
+            "reason": "No enabled rules available to evaluate this tool call",
+            "pii_hits": []
+        }]
+    else:
+        final_decision = "ALLOW" if all(r["decision"] == "ALLOW" for r in rule_results) else "DENY"
+
+    print(f"Final Decision: {final_decision}")
+    print("Rule Results:")
+    for result in rule_results:
+        print(json.dumps(result, indent=2))
+
+    log_audit_entry(tool_call, rule_results)
+    return final_decision
+
     
     print(f"\nTool:    {tool_call['tool']}")
     print(f"Agent:   {tool_call['agent']}")
@@ -112,6 +151,8 @@ def evaluate(tool_call: dict, rules: list[dict]) -> None:
         print(f"  - {reason}")
     
     log_audit_entry(tool_call, rule_results)
+
+    return final_decision
 
 # --- Audit Log ---
 def log_audit_entry(tool_call: dict, rule_results: list[dict]) -> None:
