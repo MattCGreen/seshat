@@ -6,6 +6,9 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 
+# --- Constants ---
+AUDIT_LOG_PATH = "seshat_audit.jsonl"
+
 # --- PII Patterns ---
 PII_PATTERNS = {
     "email": re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"),
@@ -43,8 +46,6 @@ def load_policies(*paths: str) -> list[dict]:
 
     return policies
 
-
-
 def collect_rules(policies: list[dict]) -> list[dict]:
     rules = []
     for policy in policies:
@@ -66,10 +67,35 @@ def scan_for_pii(parameters: dict) -> list[dict]:
                 hits.append({"field": param_key, "pii_type": pii_type})
     return hits
 
+# --- Redactor ---
+def redact_pii(parameters: dict) -> dict:
+    """
+    Return a copy of parameters with PII values replaced
+    by typed redaction tokens.
+
+    Only top-level string values are redacted in v0.4.
+    Nested dicts and lists pass through unchanged. This
+    will be addressed in a future version.
+    """
+    redacted = {}
+    for key, value in parameters.items():
+        if not isinstance(value, str):
+            redacted[key] = value
+            continue
+
+        redacted_value = value
+        for pii_type, pattern in PII_PATTERNS.items():
+            token = f"[REDACTED:{pii_type.upper()}]"
+            redacted_value = pattern.sub(token, redacted_value)
+
+        redacted[key] = redacted_value
+
+    return redacted
+
 # --- Evaluator ---
 def evaluate_rule(tool_call: dict, rule: dict) -> tuple[str, str, list[dict]]:
     pii_hits = scan_for_pii(tool_call.get("parameters", {}))
-    
+
     if rule["type"] == "pii_check":
         if pii_hits:
             return "DENY", "PII detected in parameters without consent check", pii_hits
@@ -78,7 +104,7 @@ def evaluate_rule(tool_call: dict, rule: dict) -> tuple[str, str, list[dict]]:
     elif rule["type"] == "disclosure_check":
         domain = tool_call["parameters"].get("domain")
         disclosure_provided = tool_call["parameters"].get(rule["required_field"], False)
-        
+
         if domain in rule.get("consequential_domains", []):
             if not disclosure_provided:
                 return "DENY", f"Consequential domain {domain} without disclosure", []
@@ -101,8 +127,8 @@ def evaluate(tool_call: dict, rules: list[dict]) -> str:
         rule_results.append({
             "rule_id": rule["rule_id"],
             "rule_name": rule["name"],
-            "policy": rule.get("source_file", "unknown"),
-            "severity": rule["severity"],
+            "policy": rule["policy"],
+            "severity": rule.get("severity", "medium"),
             "decision": decision,
             "reason": reason,
             "pii_hits": pii_hits
@@ -124,49 +150,41 @@ def evaluate(tool_call: dict, rules: list[dict]) -> str:
     else:
         final_decision = "ALLOW" if all(r["decision"] == "ALLOW" for r in rule_results) else "DENY"
 
-    print(f"Final Decision: {final_decision}")
-    print("Rule Results:")
-    for result in rule_results:
-        print(json.dumps(result, indent=2))
+    redacted_params = redact_pii(tool_call.get("parameters", {}))
 
-    log_audit_entry(tool_call, rule_results)
-    return final_decision
-
-    
     print(f"\nTool:    {tool_call['tool']}")
     print(f"Agent:   {tool_call['agent']}")
     print(f"Session: {tool_call['session_id']}")
-    print(f"Time:    {datetime.now(timezone.utc).isoformat()}\n")
-    
+    print(f"Time:    {datetime.now(timezone.utc).isoformat()}")
+    print(f"Parameters (redacted): {json.dumps(redacted_params, indent=2)}\n")
+
     print("Rule Results:")
     for result in rule_results:
         print(f"  Rule ID: {result['rule_id']} - {result['rule_name']} → {result['decision']}")
-    
-    final_decision = "ALLOW" if all(r["decision"] == "ALLOW" for r in rule_results) else "DENY"
+
     reasons = [f"{r['rule_id']}: {r['reason']}" for r in rule_results if r["decision"] != "ALLOW"]
-    
+
     print(f"\nFinal Decision: {final_decision}")
     print("Reasons:")
     for reason in reasons:
         print(f"  - {reason}")
-    
-    log_audit_entry(tool_call, rule_results)
 
+    log_audit_entry(tool_call, rule_results)
     return final_decision
 
 # --- Audit Log ---
 def log_audit_entry(tool_call: dict, rule_results: list[dict]) -> None:
     final_decision = "ALLOW" if all(r["decision"] == "ALLOW" for r in rule_results) else "DENY"
-    audit_log_path = "seshat_audit.jsonl"
-    
-    with open(audit_log_path, "a") as log_file:
+
+    redacted_params = redact_pii(tool_call.get("parameters", {}))
+
+    with open(AUDIT_LOG_PATH, "a") as log_file:
         entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": tool_call["session_id"],
             "agent": tool_call["agent"],
             "tool": tool_call["tool"],
-            "parameters": tool_call.get("parameters", {}),
-            # TODO: Redact PII in production
+            "parameters": redacted_params,
             "rule_results": rule_results,
             "final_decision": final_decision
         }
@@ -230,3 +248,52 @@ if __name__ == "__main__":
     }
     print("\nTest Case 4:")
     evaluate(tool_call_4, rules)
+
+    # Test Case 5: Fail-closed when no rules loaded
+    print("\nTest Case 5: Empty rules list (fail-closed test)")
+    empty_result = evaluate(tool_call_3, [])
+    print(f"Result: {empty_result}")
+
+    # --- Redaction Tests ---
+    print("\n=== Redaction Tests ===")
+
+    redaction_test_cases = [
+        {
+            "name": "Single email",
+            "input": {"query": "Contact john@example.com for details"},
+            "expected_contains": "[REDACTED:EMAIL]"
+        },
+        {
+            "name": "Multiple PII types",
+            "input": {"note": "Call 555-123-4567 or email jane@test.com"},
+            "expected_contains_all": ["[REDACTED:PHONE]", "[REDACTED:EMAIL]"]
+        },
+        {
+            "name": "Non-string values pass through",
+            "input": {"count": 5, "active": True, "name": "test"},
+            "expected_unchanged": True
+        },
+        {
+            "name": "SSN redaction",
+            "input": {"data": "SSN is 123-45-6789"},
+            "expected_contains": "[REDACTED:SSN]"
+        }
+    ]
+
+    for test in redaction_test_cases:
+        result = redact_pii(test["input"])
+        print(f"\nTest: {test['name']}")
+        print(f"  Input:  {test['input']}")
+        print(f"  Output: {result}")
+
+        if "expected_contains" in test:
+            found = any(test["expected_contains"] in str(v) for v in result.values())
+            print(f"  Pass: {found}")
+        elif "expected_contains_all" in test:
+            all_found = all(
+                any(token in str(v) for v in result.values())
+                for token in test["expected_contains_all"]
+            )
+            print(f"  Pass: {all_found}")
+        elif test.get("expected_unchanged"):
+            print(f"  Pass: {result == test['input']}")
