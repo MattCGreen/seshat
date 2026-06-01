@@ -17,7 +17,7 @@ If Seshat can't evaluate, the agent doesn't act.
 
 ## Current Status
 
-**v0.2 — Proof of Concept**
+**v0.4 — PII Redaction in logs**
 
 - [x] YAML policy file with PII detection rules
 - [x] Regex-based PII scanner (email, SSN)
