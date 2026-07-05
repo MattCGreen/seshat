@@ -1,0 +1,11 @@
+policy:
+  name: "PII Protection Policy"
+  version: "1.0"
+  description: "Prohibits processing of personally identifiable information without consent verification"
+  rules:
+    - rule_id: "PII-001"
+      name: "prohibit-pii-processing-without-consent"
+      type: "pii_check"
+      severity: "high"
+      enabled: true
+      description: "Scans tool call parameters for PII patterns (email, SSN, phone, credit card, IP address). Denies if any PII found."

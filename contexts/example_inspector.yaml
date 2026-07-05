@@ -1,0 +1,23 @@
+role: Inspector
+authority_level: L3
+active_frameworks:
+  - eu_ai_act:
+      - "Article 5: Prohibited Practices"
+      - "Article 9: Risk Management System"
+  - nist_ai_rmf:
+      - "GOVERN: Establish context"
+      - "MAP: Identify risks"
+delegation_limits:
+  max_agent_spawn: 2
+  allowed_tools:
+    - file_read
+    - web_search
+    - pii_scan
+  blocked_tools:
+    - shell_exec
+    - cloud_write
+    - db_write
+compliance_posture:
+  audit_level: detailed
+  fail_closed: true
+  pii_redaction: true

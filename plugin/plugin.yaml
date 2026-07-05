@@ -1,0 +1,7 @@
+name: seshat_pep
+version: 0.5.0
+description: "Seshat Policy Enforcement Point — intercepts every tool call, evaluates against YAML governance policies, blocks DENY, logs to immutable JSONL audit trail. Bootstrap governance for AI agent stacks."
+author: Matthew Green
+provides_hooks:
+  - pre_tool_call
+  - post_tool_call

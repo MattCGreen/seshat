@@ -1,0 +1,19 @@
+policy:
+  name: "Colorado AI Act Disclosure Policy"
+  version: "1.0"
+  description: "Requires disclosure for AI decisions in consequential domains (lending, housing, employment, insurance, healthcare, education, legal)"
+  rules:
+    - rule_id: "CO-AI-001"
+      name: "consequential-domain-disclosure"
+      type: "disclosure_check"
+      severity: "high"
+      enabled: true
+      required_field: "disclosure_provided"
+      consequential_domains:
+        - lending
+        - housing
+        - employment
+        - insurance
+        - healthcare
+        - education
+        - legal
