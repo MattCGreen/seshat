@@ -39,7 +39,6 @@ This maps to the standard PEP/PDP split used by Microsoft Agent Governance Toolk
 - [x] Context-derived tool blocklists from governance context YAML
 - [x] Governance skill (`seshat-governance`) — advisory layer (PDP)
 - [ ] Integration with additional agent frameworks
-- [ ] Local LLM for semantic policy interpretation (Phase 4)
 - [ ] Hash chaining for audit trail integrity (roadmap)
 
 ## Repository Structure
