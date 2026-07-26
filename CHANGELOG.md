@@ -11,10 +11,12 @@ All notable changes to Seshat are documented in this file.
 - NIST AI RMF policy file (`policies/nist_ai_rmf.yml`)
 - ISO 42001 policy file (`policies/iso_42001.yml`)
 - CHANGELOG.md
+- install.sh — one-way sync script (repo → live Hermes install)
 
 ### Changed
 - plugin.yaml description: "immutable JSONL audit trail" → "append-only JSONL audit trail"
 - README.md: added note clarifying audit trail is append-only by convention
+- tests/test_evaluator.py — expanded to 24 tests (4 new NIST/ISO framework tests, TEST 5 updated for dual assessment IDs, hook tests renumbered 17–24)
 - Example context: replaced placeholder tool names (`shell_exec`, `cloud_write`, `db_write`) with real Hermes tool names
 
 ## [0.5.0] — 2026-07-05

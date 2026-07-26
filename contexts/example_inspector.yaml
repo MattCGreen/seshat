@@ -26,13 +26,17 @@ delegation_limits:
   allowed_tools: []
   # These are real Hermes Agent tool names. Seshat blocks them via
   # the context-derived tool_blocklist rule. Customize for your needs.
+  # The example blocks high-risk tools that can execute arbitrary code
+  # or spawn autonomous agents. Uncomment others as needed.
   blocked_tools:
-    - terminal
-    - browser_navigate
-    - browser_click
-    - browser_type
-    - write_file
-    - patch
+    - execute_code
+    - delegate_task
+    # - terminal
+    # - browser_navigate
+    # - browser_click
+    # - browser_type
+    # - write_file
+    # - patch
 compliance_posture:
   audit_level: detailed
   fail_closed: true

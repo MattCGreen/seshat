@@ -1,7 +1,7 @@
 """
-Seshat v0.5 — Test Suite
-=========================
-20 tests covering the evaluation engine and plugin hook logic.
+Seshat v0.6-pre — Test Suite
+=============================
+24 tests covering the evaluation engine and plugin hook logic.
 
 Run: python tests/test_evaluator.py
 """
@@ -130,13 +130,13 @@ def run_tests():
     e13 = evaluate_tool_call(tc13, policy_files, audit_log)
     check("NIST MEASURE-2 DENY no assessment", e13["final_decision"] == "DENY")
 
-    # TEST 14: NIST AI RMF — MEASURE-2 with assessment passes disclosure
+    # TEST 14: NIST AI RMF — MEASURE-2 with assessment (both IDs for all frameworks)
     tc14 = {"tool": "ai_decision", "agent": "h", "session_id": "s14",
             "parameters": {"domain": "criminal_justice", "decision": "flag",
-                           "risk_assessment_id": "RA-2026-001"}}
+                           "risk_assessment_id": "RA-2026-001",
+                           "impact_assessment_id": "IA-2026-001"}}
     e14 = evaluate_tool_call(tc14, policy_files, audit_log)
-    check("NIST MEASURE-2 ALLOW with assessment",
-          e14["final_decision"] in ("ALLOW", "DENY"))  # may still DENY on other rules
+    check("NIST MEASURE-2 ALLOW with assessment", e14["final_decision"] == "ALLOW")
 
     # TEST 15: NIST AI RMF — GOVERN-2 blocks execute_code
     tc15 = {"tool": "execute_code", "agent": "h", "session_id": "s15",
@@ -145,6 +145,8 @@ def run_tests():
     check("NIST GOVERN-2 blocks execute_code", e15["final_decision"] == "DENY")
 
     # TEST 16: ISO 42001 — Clause 8.2 impact assessment required
+    # Note: lending domain triggers Colorado, NIST, and ISO disclosure rules.
+    # This test is non-isolating by design — verifies DENY when any required field is missing.
     tc16 = {"tool": "ai_decision", "agent": "h", "session_id": "s16",
             "parameters": {"domain": "lending", "decision": "approve"}}
     e16 = evaluate_tool_call(tc16, policy_files, audit_log)
@@ -172,23 +174,23 @@ def run_tests():
             "rules": [], "context": {}
         }
 
-    # TEST 13: BLOCKS PII
+    # TEST 17: BLOCKS PII
     reset_cache()
     r = plugin_pkg.seshat_pre_tool_call(
         "terminal", {"command": "curl ?email=j@x.com"}, "t1")
     check("BLOCKS PII", r is not None and r.get("action") == "block")
 
-    # TEST 14: ALLOWS clean
+    # TEST 18: ALLOWS clean
     reset_cache()
     check("ALLOWS clean",
           plugin_pkg.seshat_pre_tool_call(
               "terminal", {"command": "ls -la"}, "t2") is None)
 
-    # TEST 15: Exempt meta-tools
+    # TEST 19: Exempt meta-tools
     check("Exempt meta-tools",
           plugin_pkg.seshat_pre_tool_call("todo", {"todos": []}, "t3") is None)
 
-    # TEST 16: post_tool_call logs both phases
+    # TEST 20: post_tool_call logs both phases
     plugin_pkg.seshat_post_tool_call(
         "terminal", {"command": "ls"},
         json.dumps({"output": "ok", "exit_code": 0, "error": None}),
@@ -200,18 +202,18 @@ def run_tests():
     check("post_tool_call audit",
           "pre_call" in phases and "post_call" in phases)
 
-    # TEST 17: H3 — error:null not misclassified
+    # TEST 21: H3 — error:null not misclassified
     check("H3 error:null not misclassified",
           json.loads(hook_lines[-1].strip())["exit_code"] == 0)
 
-    # TEST 18: Context blocklist
+    # TEST 22: Context blocklist
     reset_cache()
     r = plugin_pkg.seshat_pre_tool_call(
-        "shell_exec", {"command": "rm"}, "t4")
+        "execute_code", {"code": "print('hi')"}, "t4")
     check("Context blocklist",
           r is not None and r.get("action") == "block")
 
-    # TEST 19: H1 — Self-protection blocks writes to ~/.seshat/
+    # TEST 23: H1 — Self-protection blocks writes to ~/.seshat/
     reset_cache()
     seshat_home = os.path.join(os.path.expanduser("~"), ".seshat")
     r = plugin_pkg.seshat_pre_tool_call(
@@ -222,7 +224,7 @@ def run_tests():
           r is not None and r.get("action") == "block"
           and "protected" in r.get("message", "").lower())
 
-    # TEST 20: C1 — Circular reference → fail-closed block
+    # TEST 24: C1 — Circular reference → fail-closed block
     reset_cache()
     circular = {}
     circular["self"] = circular

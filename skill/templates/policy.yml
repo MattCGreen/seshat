@@ -15,7 +15,7 @@ policy:
     # --- PII Check ---
     # Scans tool call parameters for PII patterns (email, SSN, phone,
     # credit card, IP address). Denies if any found.
-    - rule_id: "PIE-001"
+    - rule_id: "PII-001"
       name: "prohibit-pii-processing"
       type: "pii_check"
       severity: "high"

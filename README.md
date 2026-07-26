@@ -25,7 +25,7 @@ This maps to the standard PEP/PDP split used by Microsoft Agent Governance Toolk
 
 ## Current Status
 
-**v0.5 — Policy Enforcement Point**
+**v0.6-pre — Four Framework Coverage**
 
 - [x] YAML policy files with PII detection rules
 - [x] Regex-based PII scanner (email, SSN, phone, credit card, IP) — recursive (nested dicts/lists)
@@ -78,7 +78,7 @@ seshat/
 │       ├── pep-plugin-architecture.md
 │       └── code-review-findings.md
 └── tests/
-    └── test_evaluator.py   # Test suite (20 tests)
+    └── test_evaluator.py   # Test suite (24 tests)
 ```
 
 ## Quick Start
@@ -89,17 +89,25 @@ seshat/
 - PyYAML
 - [Hermes Agent](https://hermes-agent.nousresearch.com/) (for the PEP plugin)
 
-### Install the Plugin
+### Install
+
+**Option A — Using install.sh (recommended):**
+
+```bash
+bash install.sh          # install everything (plugin + skill + config)
+bash install.sh plugin   # plugin only
+bash install.sh skill    # skill only
+bash install.sh config   # policies + contexts only
+```
+
+**Option B — Manual:**
 
 1. Copy `plugin/` to `~/.hermes/plugins/seshat_pep/`
-2. Copy `policies/` to `~/.seshat/policies/`
-3. Copy `contexts/` to `~/.seshat/contexts/`
-4. Enable: `hermes plugins enable seshat_pep`
-5. Restart your Hermes session
-
-### Install the Skill
-
-1. Copy `skill/` to `~/.hermes/skills/governance/seshat-governance/`
+2. Copy `skill/` to `~/.hermes/skills/governance/seshat-governance/`
+3. Copy `policies/` to `~/.seshat/policies/`
+4. Copy `contexts/` to `~/.seshat/contexts/`
+5. Enable: `hermes plugins enable seshat_pep`
+6. Restart your Hermes session
 
 ### Run Tests
 
