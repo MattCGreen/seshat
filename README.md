@@ -2,6 +2,8 @@
 
 Seshat is an AI governance engine that acts as a Policy Enforcement Point (PEP) for AI agent tool calls. Named after the Egyptian goddess of records and measurement, Seshat intercepts agent actions, evaluates them against YAML-defined policies, and logs every decision to an append-only audit trail.
 
+> **Note:** The audit trail is append-only by convention (not cryptographically enforced). Hash chaining is on the roadmap. See [Design Principles](#design-principles) below.
+
 ## What It Does
 
 1. An AI agent requests a tool call (e.g., query a database)
@@ -30,7 +32,6 @@ This maps to the standard PEP/PDP split used by Microsoft Agent Governance Toolk
 - [x] Policy evaluator with ALLOW/DENY decisions
 - [x] JSONL append-only audit trail (pre-call + post-call)
 - [x] Multi-rule evaluation (PII, disclosure, tool blocklist, tool allowlist)
-- [x] Colorado AI Act disclosure rule
 - [x] PII redaction in audit logs (recursive)
 - [x] Hermes plugin (`seshat_pep`) with `pre_tool_call` / `post_tool_call` hooks
 - [x] Fail-closed: hook crashes return block, not skip
@@ -38,21 +39,27 @@ This maps to the standard PEP/PDP split used by Microsoft Agent Governance Toolk
 - [x] Hot-reloadable policies (mtime-based, thread-safe cache)
 - [x] Context-derived tool blocklists from governance context YAML
 - [x] Governance skill (`seshat-governance`) — advisory layer (PDP)
+- [x] Four framework policy mappings: EU AI Act, NIST AI RMF, ISO 42001, Colorado SB 24-205
+- [x] Example context with all four frameworks and real Hermes tool names
 - [ ] Integration with additional agent frameworks
 - [ ] Hash chaining for audit trail integrity (roadmap)
+- [ ] LLM semantic checks (Phase 4 — roadmap)
 
 ## Repository Structure
 
 ```
 seshat/
 ├── README.md               # This file
+├── CHANGELOG.md            # Release history and changes
 ├── LICENSE                 # Apache 2.0
 ├── eval/                   # Core evaluation engine
 │   ├── __init__.py
 │   └── evaluator.py        # PII scan, rule dispatch, audit entries, fail-closed
-├── policies/               # Example policy files
-│   ├── pii_rule.yml        # PII detection rule
-│   └── colorado_ai_act.yml # Consequential domain disclosure rule
+├── policies/               # Example policy files (framework mappings)
+│   ├── pii_rule.yml        # PII detection rule (EU AI Act Art 9)
+│   ├── colorado_ai_act.yml # Consequential domain disclosure (CO SB 24-205)
+│   ├── nist_ai_rmf.yml     # NIST AI RMF controls (GOVERN, MAP, MEASURE)
+│   └── iso_42001.yml       # ISO 42001 controls (Clauses 8.2, 8.3, 8.4)
 ├── contexts/               # Example governance contexts
 │   └── example_inspector.yaml
 ├── plugin/                 # Hermes PEP plugin
@@ -63,9 +70,13 @@ seshat/
 ├── skill/                  # Hermes governance skill (PDP)
 │   ├── SKILL.md            # Full skill documentation
 │   ├── scripts/
-│   │   └── eval.py         # Evaluation engine (mirrors eval/evaluator.py)
+│   │   ├── eval.py         # Evaluation engine (mirrors eval/evaluator.py)
+│   │   └── test_eval.py    # Standalone test script (6 tests)
+│   ├── templates/
+│   │   └── policy.yml      # Commented policy template
 │   └── references/
-│       └── pep-plugin-architecture.md
+│       ├── pep-plugin-architecture.md
+│       └── code-review-findings.md
 └── tests/
     └── test_evaluator.py   # Test suite (20 tests)
 ```

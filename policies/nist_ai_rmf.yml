@@ -1,0 +1,61 @@
+# NIST AI RMF — Policy Mapping
+# =============================
+# Maps NIST AI Risk Management Framework controls to enforceable Seshat rules.
+#
+# NIST AI RMF Functions: GOVERN, MAP, MEASURE, MANAGE
+# Reference: https://www.nist.gov/itl/ai-risk-management-framework
+#
+# NOTE: Seshat's current rule types (regex PII, disclosure checks, tool
+# blocklists) enforce a subset of NIST AI RMF controls — specifically
+# the ones that can be evaluated from tool call parameters without
+# semantic analysis. Full RMF coverage requires Phase 4 (LLM semantic
+# checks). These rules activate when tool calls include relevant
+# parameters (e.g., domain, risk_assessment_id).
+
+policy:
+  name: "NIST AI RMF Policy"
+  version: "1.0"
+  description: "Enforces NIST AI RMF controls applicable to AI agent tool calls. Covers data protection (MAP-5), consequential decision disclosure (MEASURE-2), and governance tool restrictions (GOVERN-2)."
+  rules:
+    # --- MAP-5: Collect and consider data characteristics ---
+    # Protects against unauthorized PII processing in data collection.
+    # Maps to: MAP 5.1 (data sourcing), MAP 5.2 (data quality)
+    - rule_id: "NIST-MAP-005"
+      name: "nist-map5-data-protection"
+      type: "pii_check"
+      severity: "high"
+      enabled: true
+      description: "MAP-5: Blocks tool calls containing PII (email, SSN, phone, credit card, IP) to prevent unauthorized data collection or processing."
+
+    # --- MEASURE-2: Assess AI system performance and impacts ---
+    # Requires documented risk assessment for consequential AI decisions.
+    # Maps to: MEASURE 2.2 (impact assessment), MEASURE 2.3 (risk tracking)
+    - rule_id: "NIST-MEAS-002"
+      name: "nist-measure2-impact-assessment"
+      type: "disclosure_check"
+      severity: "high"
+      enabled: true
+      required_field: "risk_assessment_id"
+      consequential_domains:
+        - lending
+        - housing
+        - employment
+        - insurance
+        - healthcare
+        - education
+        - legal
+        - criminal_justice
+      description: "MEASURE-2: Requires a risk_assessment_id when operating in consequential domains. Ensures AI decisions are tied to documented impact assessments."
+
+    # --- GOVERN-2: Accountability and authority delegation ---
+    # Blocks tools that bypass governance oversight.
+    # Maps to: GOVERN 2.1 (roles/responsibilities), GOVERN 2.2 (delegation limits)
+    - rule_id: "NIST-GOV-002"
+      name: "nist-govern2-tool-restrictions"
+      type: "tool_blocklist"
+      severity: "medium"
+      enabled: true
+      blocked_tools:
+        - execute_code
+        - delegate_task
+      description: "GOVERN-2: Blocks autonomous code execution and task delegation by default. These tools can bypass human oversight and should be explicitly allowed via context or allowlist policy."

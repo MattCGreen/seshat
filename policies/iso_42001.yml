@@ -1,0 +1,63 @@
+# ISO 42001 — Policy Mapping
+# ===========================
+# Maps ISO/IEC 42001:2023 (AI Management System) controls to enforceable
+# Seshat rules.
+#
+# ISO 42001 is a management system standard (like ISO 27001 for security).
+# Most controls are organizational/process-level and not directly enforceable
+# in a PEP. The rules below cover the subset that maps to tool call
+# interception: data protection (Clause 8.3), AI system impact assessment
+# (Clause 8.2), and operational controls (Clause 8.4).
+#
+# Reference: https://www.iso.org/standard/82530.html
+#
+# NOTE: Full ISO 42001 compliance requires organizational controls
+# (policies, training, roles) that are outside Seshat's scope. These
+# rules enforce the technical controls that can be evaluated from tool
+# call parameters.
+
+policy:
+  name: "ISO 42001 AI Management System Policy"
+  version: "1.0"
+  description: "Enforces ISO/IEC 42001:2023 technical controls applicable to AI agent tool calls. Covers AI impact assessment (Clause 8.2), data protection (Clause 8.3), and operational controls (Clause 8.4)."
+  rules:
+    # --- Clause 8.3: Data management ---
+    # Protects against unauthorized PII processing.
+    # Maps to: 8.3.1 (data governance), 8.3.2 (data quality/lineage)
+    - rule_id: "ISO-42001-0083"
+      name: "iso42001-data-protection"
+      type: "pii_check"
+      severity: "high"
+      enabled: true
+      description: "Clause 8.3: Blocks tool calls containing PII (email, SSN, phone, credit card, IP) to enforce data protection controls for AI system inputs and outputs."
+
+    # --- Clause 8.2: AI system impact assessment ---
+    # Requires documented impact assessment for consequential AI decisions.
+    # Maps to: 8.2.1 (impact assessment), 8.2.2 (stakeholder impact)
+    - rule_id: "ISO-42001-0082"
+      name: "iso42001-impact-assessment"
+      type: "disclosure_check"
+      severity: "high"
+      enabled: true
+      required_field: "impact_assessment_id"
+      consequential_domains:
+        - lending
+        - housing
+        - employment
+        - insurance
+        - healthcare
+        - education
+        - legal
+        - criminal_justice
+      description: "Clause 8.2: Requires an impact_assessment_id when operating in consequential domains. Ensures AI system use is preceded by documented impact assessment per ISO 42001 requirements."
+
+    # --- Clause 8.4: Operational controls ---
+    # Restricts tools that can bypass management system oversight.
+    # Maps to: 8.4.1 (operational planning), 8.4.4 (change management)
+    - rule_id: "ISO-42001-0084"
+      name: "iso42001-operational-controls"
+      type: "tool_blocklist"
+      severity: "medium"
+      enabled: false
+      blocked_tools: []
+      description: "Clause 8.4: Placeholder for organization-specific operational controls. Disabled by default — enable and configure blocked_tools based on your AI management system's operational requirements."

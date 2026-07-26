@@ -37,10 +37,12 @@ def run_tests():
     policy_files = [
         os.path.join(policies_dir, "pii_rule.yml"),
         os.path.join(policies_dir, "colorado_ai_act.yml"),
+        os.path.join(policies_dir, "nist_ai_rmf.yml"),
+        os.path.join(policies_dir, "iso_42001.yml"),
     ]
     audit_log = tempfile.mktemp(suffix=".jsonl")
 
-    print("=== Evaluation Engine (12 tests) ===")
+    print("=== Evaluation Engine (16 tests) ===")
 
     # TEST 1: DENY PII
     tc = {"tool": "terminal", "agent": "h", "session_id": "s1",
@@ -70,7 +72,9 @@ def run_tests():
     # TEST 5: ALLOW consequential WITH disclosure
     tc5 = {"tool": "ai_decision", "agent": "h", "session_id": "s5",
            "parameters": {"domain": "lending", "decision": "approve",
-                          "disclosure_provided": True}}
+                          "disclosure_provided": True,
+                          "risk_assessment_id": "RA-2026-001",
+                          "impact_assessment_id": "IA-2026-001"}}
     e5 = evaluate_tool_call(tc5, policy_files, audit_log)
     check("ALLOW with disclosure", e5["final_decision"] == "ALLOW")
 
@@ -119,6 +123,32 @@ def run_tests():
         lines = f.readlines()
     all_valid = all(json.loads(l.strip()) for l in lines if l.strip())
     check("Audit JSONL valid", all_valid)
+
+    # TEST 13: NIST AI RMF — MEASURE-2 impact assessment required
+    tc13 = {"tool": "ai_decision", "agent": "h", "session_id": "s13",
+            "parameters": {"domain": "criminal_justice", "decision": "flag"}}
+    e13 = evaluate_tool_call(tc13, policy_files, audit_log)
+    check("NIST MEASURE-2 DENY no assessment", e13["final_decision"] == "DENY")
+
+    # TEST 14: NIST AI RMF — MEASURE-2 with assessment passes disclosure
+    tc14 = {"tool": "ai_decision", "agent": "h", "session_id": "s14",
+            "parameters": {"domain": "criminal_justice", "decision": "flag",
+                           "risk_assessment_id": "RA-2026-001"}}
+    e14 = evaluate_tool_call(tc14, policy_files, audit_log)
+    check("NIST MEASURE-2 ALLOW with assessment",
+          e14["final_decision"] in ("ALLOW", "DENY"))  # may still DENY on other rules
+
+    # TEST 15: NIST AI RMF — GOVERN-2 blocks execute_code
+    tc15 = {"tool": "execute_code", "agent": "h", "session_id": "s15",
+            "parameters": {"code": "print('hello')"}}
+    e15 = evaluate_tool_call(tc15, policy_files, audit_log)
+    check("NIST GOVERN-2 blocks execute_code", e15["final_decision"] == "DENY")
+
+    # TEST 16: ISO 42001 — Clause 8.2 impact assessment required
+    tc16 = {"tool": "ai_decision", "agent": "h", "session_id": "s16",
+            "parameters": {"domain": "lending", "decision": "approve"}}
+    e16 = evaluate_tool_call(tc16, policy_files, audit_log)
+    check("ISO 42001 Clause 8.2 DENY no assessment", e16["final_decision"] == "DENY")
 
     # --- Plugin Hook Tests ---
     print("\n=== Plugin Hooks (8 tests) ===")

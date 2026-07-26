@@ -1,3 +1,9 @@
+# Example Governance Context
+# ===========================
+# This is a generic example for the public repo. Copy to
+# ~/.seshat/contexts/<your_context>.yaml and customize.
+# NEVER push role-specific or employer-specific contexts.
+
 role: Inspector
 authority_level: L3
 active_frameworks:
@@ -7,16 +13,26 @@ active_frameworks:
   - nist_ai_rmf:
       - "GOVERN: Establish context"
       - "MAP: Identify risks"
+      - "MEASURE: Assess performance"
+      - "MANAGE: Mitigate risks"
+  - iso_42001:
+      - "Clause 8.2: AI impact assessment"
+      - "Clause 8.3: Data management"
+      - "Clause 8.4: Operational controls"
+  - colorado_ai_act:
+      - "SB 24-205: Consequential decisions"
 delegation_limits:
   max_agent_spawn: 2
-  allowed_tools:
-    - file_read
-    - web_search
-    - pii_scan
+  allowed_tools: []
+  # These are real Hermes Agent tool names. Seshat blocks them via
+  # the context-derived tool_blocklist rule. Customize for your needs.
   blocked_tools:
-    - shell_exec
-    - cloud_write
-    - db_write
+    - terminal
+    - browser_navigate
+    - browser_click
+    - browser_type
+    - write_file
+    - patch
 compliance_posture:
   audit_level: detailed
   fail_closed: true

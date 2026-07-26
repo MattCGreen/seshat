@@ -1,0 +1,67 @@
+# Seshat Policy Template
+# =======================
+# Copy this file to ~/.seshat/policies/<name>.yml and customize.
+# The PEP plugin auto-loads all *.yml files from ~/.seshat/policies/.
+#
+# CRITICAL: The 'rules' list MUST be nested inside the 'policy:' key
+# (as 'policy.rules'), NOT as a top-level sibling of 'policy:'.
+# Wrong nesting = zero rules loaded = everything fails-closed to DENY.
+
+policy:
+  name: "Your Policy Name"
+  version: "1.0"
+  description: "What this policy enforces"
+  rules:
+    # --- PII Check ---
+    # Scans tool call parameters for PII patterns (email, SSN, phone,
+    # credit card, IP address). Denies if any found.
+    - rule_id: "PIE-001"
+      name: "prohibit-pii-processing"
+      type: "pii_check"
+      severity: "high"
+      enabled: true
+
+    # --- Disclosure Check ---
+    # Requires a disclosure field to be present and truthy when the
+    # tool call operates on a consequential domain.
+    # - rule_id: "DISC-001"
+    #   name: "consequential-domain-disclosure"
+    #   type: "disclosure_check"
+    #   severity: "high"
+    #   enabled: true
+    #   required_field: "disclosure_provided"
+    #   consequential_domains:
+    #     - lending
+    #     - housing
+    #     - employment
+    #     - insurance
+    #     - healthcare
+    #     - education
+    #     - legal
+
+    # --- Tool Blocklist ---
+    # Blocks specific tools by name. Usually auto-derived from the
+    # governance context's delegation_limits.blocked_tools, but can
+    # also be defined explicitly here.
+    # - rule_id: "BLK-001"
+    #   name: "block-dangerous-tools"
+    #   type: "tool_blocklist"
+    #   severity: "high"
+    #   enabled: true
+    #   blocked_tools:
+    #     - shell_exec
+    #     - cloud_write
+    #     - db_write
+
+    # --- Tool Allowlist ---
+    # If allowed_tools is non-empty, only tools in the list are permitted.
+    # An empty list allows all tools (no restriction).
+    # - rule_id: "ALW-001"
+    #   name: "allowlist-tools"
+    #   type: "tool_allowlist"
+    #   severity: "high"
+    #   enabled: true
+    #   allowed_tools:
+    #     - file_read
+    #     - web_search
+    #     - pii_scan
