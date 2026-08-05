@@ -233,6 +233,71 @@ def run_tests():
     check("C1 Circular ref block",
           r is not None and r.get("action") == "block")
 
+    # --- URL-Aware PII Scanning Tests (4 tests) ---
+    print("\n=== URL-Aware PII Scanning (4 tests) ===")
+
+    from evaluator import _looks_like_url, _scan_url, scan_for_pii
+
+    # TEST 25: URL with product ID in path should NOT false-positive
+    # This is the exact case that triggered the false positive:
+    # product.4201002520.html has periods that the phone regex treats
+    # as digit-group separators, matching 420.100.2520 as a "phone number"
+    tc_url1 = {
+        "tool": "web_extract",
+        "agent": "h", "session_id": "s25",
+        "parameters": {
+            "urls": [
+               "https://www.costco.com/maytag-4.7-cu.-ft.-top-load-agitator-washer-with-extra-power-cycle.product.4201002520.html",
+            ]
+        }
+    }
+    e25 = evaluate_tool_call(tc_url1, policy_files, audit_log)
+    check("URL product ID no false positive",
+          e25["final_decision"] == "ALLOW")
+
+    # TEST 26: URL with email in query string SHOULD trigger PII
+    # PII in query parameter values is real and must be caught
+    tc_url2 = {
+        "tool": "web_extract",
+        "agent": "h", "session_id": "s26",
+        "parameters": {
+            "urls": [
+                "https://api.example.com/lookup?email=john@example.com",
+            ]
+        }
+    }
+    e26 = evaluate_tool_call(tc_url2, policy_files, audit_log)
+    check("URL query string email detected",
+          e26["final_decision"] == "DENY")
+
+    # TEST 27: URL with phone in query string SHoULD trigger PII
+    tc_url3 = {
+        "tool": "web_extract",
+        "agent": "h", "session_id": "s27",
+        "parameters": {
+            "urls": [
+                "https://api.example.com/lookup?phone=555-123-4567",
+            ]
+        }
+    }
+    e27 = evaluate_tool_call(tc_url3, policy_files, audit_log)
+    check("URL query string phone detected",
+          e27["final_decision"] == "DENY")
+
+    # TEST 28: URL with non-PII query params should pass
+    tc_url4 = {
+        "tool": "web_extract",
+        "agent": "h", "session_id": "s28",
+        "parameters": {
+            "urls": [
+                "https://www.example.com/search?q=maytag+washer&page=2&sort=price",
+            ]
+        }
+    }
+    e28 = evaluate_tool_call(tc_url4, policy_files, audit_log)
+    check("URL non-PII query params pass",
+          e28["final_decision"] == "ALLOW")
+
     # --- Summary ---
     total = len(results)
     print(f"\n{'=' * 50}")

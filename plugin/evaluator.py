@@ -11,6 +11,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse, parse_qs
 
 import yaml
 
@@ -27,6 +28,25 @@ PII_PATTERNS = {
     "credit_card": re.compile(r"\b(?:\d[ -]*?){15,16}\b"),
     "ip_address": re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
 }
+
+# PII field names that, if present as URL query parameter keys, indicate
+# the corresponding value should be scanned for PII content.
+_PII_QUERY_KEYS = frozenset({
+    "email", "e-mail", "mail",
+    "phone", "tel", "telephone", "mobile",
+    "ssn", "social_security",
+    "name", "full_name", "firstname", "lastname", "first_name", "last_name",
+    "address", "street", "city", "zip", "zipcode", "postal",
+    "dob", "birthday", "birthdate",
+    "account", "account_id", "acct",
+    "token", "api_key", "apikey", "key",
+    "password", "passwd", "pwd",
+    "user", "username", "userid", "user_id",
+})
+
+# URL scheme detection — strings matching this are treated as URLs and
+# routed to _scan_url instead of the free-text PII scanner.
+_URL_SCHEMES = frozenset({"http", "https", "ftp", "ws", "wss"})
 
 
 # ---------------------------------------------------------------------------
@@ -94,12 +114,95 @@ def scan_for_pii(parameters: dict) -> list[dict]:
     return hits
 
 
-def _scan_value(value, field_path: str, hits: list):
-    """Recursively scan a value for PII patterns."""
-    if isinstance(value, str):
+def _looks_like_url(value: str) -> bool:
+    """Check if a string is a URL that should use structured scanning.
+    Returns True for strings with a recognized scheme (http://, https://, etc.)
+    or strings that start with www. and contain a dot in the domain portion.
+    Bare domain names without a scheme are NOT treated as URLs -- only
+    strings with an explicit scheme or a clear www. prefix, to avoid
+    misclassifying ordinary text as URLs.
+    """
+    if not isinstance(value, str) or len(value) < 8:
+        return False
+    lowered = value.lower().lstrip()
+    for scheme in _URL_SCHEMES:
+        prefix = scheme + "://"
+        if lowered.startswith(prefix):
+            return True
+    if lowered.startswith("www."):
+        if "/" in lowered[4:]:
+            return True
+    return False
+
+
+def _scan_url(url: str, field_path: str, hits: list):
+    """Scan a URL for PII using structured parsing.
+
+    URL path segments often contain numeric IDs (e.g., product.4201002520)
+    that false-positive on the phone and IP address regexes because periods
+    in the path act as digit-group separators. This function:
+
+    1. Scans query parameter VALUES for all PII types (PII can legitimately
+       appear in query strings on poorly designed endpoints).
+    2. Scans the hostname for IP addresses (raw IP URLs).
+    3. Does NOT scan the URL path -- path segments are server-defined routes,
+       product IDs, and slugs, not user data.
+
+    PII in query strings is detected when the parameter key is in a known
+    PII field name set (_PII_QUERY_KEYS) -- this catches ?email=...&phone=...
+    while allowing ?s=searchterm&product_id=12345 to pass through.
+    """
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        # If URL parsing fails, fall back to full-text scan
         for pii_type, pattern in PII_PATTERNS.items():
-            if pattern.search(value):
+            if pattern.search(url):
                 hits.append({"field": field_path or "<root>", "pii_type": pii_type})
+        return
+
+    # 1. Check if the hostname is a raw IP address
+    if parsed.hostname:
+        if PII_PATTERNS["ip_address"].search(parsed.hostname):
+            hits.append({
+                "field": f"{field_path}.host" if field_path else "host",
+                "pii_type": "ip_address",
+            })
+
+    # 2. Scan query parameter values
+    if parsed.query:
+        try:
+            params = parse_qs(parsed.query, keep_blank_values=True)
+        except Exception:
+            params = {}
+        for key, values in params.items():
+            key_lower = key.lower()
+            if key_lower in _PII_QUERY_KEYS:
+                for val in values:
+                    for pii_type, pattern in PII_PATTERNS.items():
+                        if pattern.search(val):
+                            hits.append({
+                                "field": f"{field_path}.query.{key}" if field_path else f"query.{key}",
+                                 "pii_type": pii_type,
+                            })
+
+
+def _scan_value(value, field_path: str, hits: list):
+    """Recursively scan a value for PII patterns.
+
+    URL-aware: if the string is a URL (has a scheme like http:// or https://),
+    it is routed to _scan_url which parses the URL structurally and scans
+    only query parameter values and the hostname, not the path. This prevents
+    false positives on product IDs and URL path segments that match phone or
+    IP patterns due to period delimiters.
+    """
+    if isinstance(value, str):
+        if _looks_like_url(value):
+            _scan_url(value, field_path, hits)
+        else:
+            for pii_type, pattern in PII_PATTERNS.items():
+                if pattern.search(value):
+                    hits.append({"field": field_path or "<root>", "pii_type": pii_type})
     elif isinstance(value, dict):
         for key, val in value.items():
             child_path = f"{field_path}.{key}" if field_path else key
